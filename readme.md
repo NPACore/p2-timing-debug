@@ -11,6 +11,13 @@
 | `txt/anti_task_display.tsv`      | `=` trigger recieved times from task/display PC| 
 | `txt/anti_task_mr.tsv`           | DICOM Acq Time headers | 
 
+## Pull data
+
+using [`git-lfs`](https://git-lfs.com/) to store csv and png files.
+```
+git clone https://github.com/NPACore/p2-timing-debug
+git lfs checkout
+```
 
 ## Stats
 
