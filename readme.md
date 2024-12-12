@@ -16,6 +16,8 @@
 using [`git-lfs`](https://git-lfs.com/) to store csv and png files.
 ```
 git clone https://github.com/NPACore/p2-timing-debug
+cd p2-timing-debug
+git lfs install
 git lfs checkout
 ```
 
