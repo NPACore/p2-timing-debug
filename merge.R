@@ -33,6 +33,7 @@ tdiff <- times %>%
    summarise(tdiff=diff(tdiff)) %>%
    separate(sesid, c('luanid','vdate')) %>%
    mutate(vdate=ymd(vdate)) 
+write.csv(times, 'txt/combined_tdiff.csv', quote=F, row.names=F)
 
 
 p <- tdiff %>% filter(scale(abs(tdiff),center=T) < 2) %>%
