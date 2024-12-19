@@ -1,6 +1,28 @@
-# Time differecnes between MR task trigger and DICOM Acq time
+# Time differences between MR task trigger and DICOM Acq time
 
-(removing extreme outliers -- bad input data?)
+
+## Overview
+This repository demonstrates pulling task onset times from two independent sources, the task display computer and the scan computer, to check for mismatches as a result of erroneously missing TTL TR triggers (`=` sent to start the task).
+
+Using participant ID (and possibly session date), we can combine the two sources and explore timing differences.
+
+Unfortunately, we cannot directly compare onset times because the computer clocks are not synced. 
+
+For the `AntiSaccade` task herein, we have two runs of the same task back to back and can compare the MR-display offset from run1 to run2 to check the task start time onsets. **If TTL was not sent when expected, this difference of differences will be non-zero and greater than the TR of the task acquisition**.
+
+
+To this end, we extract the participant ID and task start time for each source, merge the two datasets, and compare timing offsets.
+
+|script|desc|
+|---|---|
+|[`display_time.bash`](display_time.bash) | extract "EPrime" PC task start time from log|
+|[`mr_time.bash`](mr_time.bash) | extract acquisition start time from first dicom in series|
+|[`merge.R`](merge.R)| merge times and explore the onset differences |
+
+See [`Makefile`](Makefile) for recipes
+
+## Comparison
+(extreme outliers -- bad input data? -- removed)
 
 ![](run_diffs_over_date.png)
 
@@ -11,7 +33,8 @@
 | `txt/anti_task_display.tsv`      | `=` trigger recieved times from task/display PC| 
 | `txt/anti_task_mr.tsv`           | DICOM Acq Time headers | 
 
-## Pull data
+
+## Pull repo data (Git Large File Storage)
 
 using [`git-lfs`](https://git-lfs.com/) to store csv and png files.
 ```
