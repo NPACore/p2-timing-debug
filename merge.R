@@ -35,13 +35,25 @@ tdiff <- times %>%
    mutate(vdate=ymd(vdate)) 
 write.csv(times, 'txt/combined_tdiff.csv', quote=F, row.names=F)
 
+TR <- 1.300 # seconds
 
-p <- tdiff %>% filter(scale(abs(tdiff),center=T) < 2) %>%
-   ggplot() + aes(y=tdiff, x=vdate) +
+p.data <- tdiff %>%
+   #filter(scale(abs(tdiff),center=T) < 2) %>%
+   filter(abs(tdiff) < 30) %>%
+   mutate(TTLerror=abs(tdiff)>TR)
+
+p <-
+   ggplot(p.data) +
+   aes(y=tdiff, x=vdate, color=TTLerror) +
+   # show TR
+   geom_hline(yintercept=c(-1,1)*TR, color='green', linetype=2) +
+   geom_label(data=filter(p.data, TTLerror), aes(label=round(tdiff,2), color=NULL), vjust=1,hjust=-.1) +
    geom_point() +
    #cowplot::theme_cowplot() +
-   see::theme_modern()+theme(axis.title.y = element_text(size = 14)) +
+   see::theme_modern() +
+   theme(axis.title.y = element_text(size = 14)) +
    labs(y=expression(run1["task-mr"] - run2['task-mr'] ~ (s)),
-        x='acquisition date')
+        x='acquisition date') +
+   scale_color_manual(values=c("black","red"))
 
-ggsave(p, file="run_diffs_over_date.png", height=3,width=5)
+ggsave(p, file="run_diffs_over_date.png", height=3,width=8)

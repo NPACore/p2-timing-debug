@@ -7,3 +7,6 @@ txt/anti_task_display.tsv:
 txt/anti_task_mr.tsv:
 	./mr_time.bash
 
+# also made by merge.R
+run_diffs_over_date.png: txt/combined_mr_task_times.csv
+	magick ./run_diffs_over_date.png -scale 50%  ./run_diffs_over_date.png
