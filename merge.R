@@ -3,7 +3,6 @@ library(dplyr)
 library(tidyr)
 library(stringr)
 library(lubridate)
-library(ggplot2)
 
 # 20241212WF - init
 
@@ -33,27 +32,5 @@ tdiff <- times %>%
    summarise(tdiff=diff(tdiff)) %>%
    separate(sesid, c('luanid','vdate')) %>%
    mutate(vdate=ymd(vdate)) 
-write.csv(times, 'txt/combined_tdiff.csv', quote=F, row.names=F)
+write.csv(tdiff, 'txt/combined_tdiff.csv', quote=F, row.names=F)
 
-TR <- 1.300 # seconds
-
-p.data <- tdiff %>%
-   #filter(scale(abs(tdiff),center=T) < 2) %>%
-   filter(abs(tdiff) < 30) %>%
-   mutate(TTLerror=abs(tdiff)>TR)
-
-p <-
-   ggplot(p.data) +
-   aes(y=tdiff, x=vdate, color=TTLerror) +
-   # show TR
-   geom_hline(yintercept=c(-1,1)*TR, color='green', linetype=2) +
-   geom_label(data=filter(p.data, TTLerror), aes(label=round(tdiff,2), color=NULL), vjust=1,hjust=-.1) +
-   geom_point() +
-   #cowplot::theme_cowplot() +
-   see::theme_modern() +
-   theme(axis.title.y = element_text(size = 14)) +
-   labs(y=expression(run1["task-mr"] - run2['task-mr'] ~ (s)),
-        x='acquisition date') +
-   scale_color_manual(values=c("black","red"))
-
-ggsave(p, file="run_diffs_over_date.png", height=3,width=8)
