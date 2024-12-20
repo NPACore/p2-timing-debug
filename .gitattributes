@@ -3,3 +3,7 @@ txt/anti_task_display.tsv filter=lfs diff=lfs merge=lfs -text
 run_diffs_over_date.png filter=lfs diff=lfs merge=lfs -text
 txt/combined_mr_task_times.csv filter=lfs diff=lfs merge=lfs -text
 txt/combined_tdiff.csv filter=lfs diff=lfs merge=lfs -text
+clock_drift.png filter=lfs diff=lfs merge=lfs -text
+txt/habit_task_mr.tsv filter=lfs diff=lfs merge=lfs -text
+txt/habit_task_display.tsv filter=lfs diff=lfs merge=lfs -text
+txt/combined_habit_times.csv filter=lfs diff=lfs merge=lfs -text

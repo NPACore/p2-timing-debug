@@ -21,6 +21,8 @@ To this end, we extract the participant ID and task start time for each source, 
 
 See [`Makefile`](Makefile) for recipes
 
+![](clock_drift.png)
+
 ## Comparison
 (extreme outliers -- bad input data? -- removed)
 
