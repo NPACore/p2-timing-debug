@@ -6,12 +6,31 @@ get_acq_times(){
 }
 first_time(){ sort -n | sed 1q; }
 
-all_runs=(/disk/mace2/scan_data/WPC-8620/2*/1*_2*/*RewardedAnti*[^f]_704*/)
-echo "[$(date)] have ${#all_runs[@]} runs"
+mr_times_of_pdirs(){
+  for run in "$@"; do
+    time_first=$(get_acq_times "$run" | first_time)
+    echo -e "$run\t$time_first"
+  done
+}
 
-for run in "${all_runs[@]}"; do
-  time_first=$(get_acq_times "$run" | first_time)
-  echo -e "$run\t$time_first"
-done | tee txt/anti_task_mr.tsv
+usage(){
+  echo "USAGE: $0 [anti|habit|/path/to/ses/id/pdir*glob]" >&2
+  echo "$*" >&2
+  exit
+}
 
-echo "[$(date)] finished"
+if [[ "$(caller)" == "0 "* ]]; then
+  set -euo pipefail
+  trap 'e=$?; [ $e -ne 0 ] && echo "$0 exited in error $e" >&2' EXIT
+  [ $# -ne 1 ] && usage "ERROR: need a study or path to work on"
+  case "$1" in
+     anti) all_runs=(/disk/mace2/scan_data/WPC-8620/2*/1*_2*/*RewardedAnti*[^f]_704*/);;
+     habit) all_runs=(/Volumes/Hera/Raw/MRprojects/Habit/2*/1*_2*/HabitTask_704x752.*/);;
+     *) test -d $1 || usage "ERROR: unknown study '$1' is not a directory/protocol dir";
+        all_runs=("$@");;
+  esac
+
+  echo "[$(date)] have ${#all_runs[@]} runs" >&2
+  mr_times_of_pdirs "${all_runs[@]}"
+  echo "[$(date)] finished" >&2
+fi
