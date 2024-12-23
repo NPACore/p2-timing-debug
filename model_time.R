@@ -1,14 +1,15 @@
 #!/usr/bin/env Rscript
 library(dplyr)
 library(ggplot2)
+library(lubridate)
 # explore clock offset drift
 # 20241220WF - init
 
 # sesid,run,acqtime_mr,acqtime_task,tdiff
-times <- read.csv('txt/combined_mr_task_times.csv') |>
+times <- read.csv('txt/combined_anti_times.csv') |>
    mutate(task='anti') |>
    rbind(read.csv('txt/combined_habit_times.csv') |> mutate(task='habit', run=1)) |>
-   mutate(across(matches('acqtime'), lubridate::ymd_hms))
+   mutate(across(matches('acqtime'), ymd_hms)) # all times expected to be UTC
 
 p_1to1 <-
    ggplot(times) +

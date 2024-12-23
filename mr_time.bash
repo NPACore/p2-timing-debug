@@ -2,7 +2,7 @@
 get_acq_times(){
   find "${1:?input dicom folder to get times}"  \
     -iname 'MR*' \
-    -exec dicom_hinfo -no_name -tag 0008,0022 -tag 0008,0032 {} \+
+    -exec dicom_hinfo -no_name -tag 0008,0022 -tag 0008,0032 -tag 0018,0080 {} \+
 }
 first_time(){ sort -n | sed 1q; }
 

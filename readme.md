@@ -15,9 +15,9 @@ To this end, we extract the participant ID and task start time for each source, 
 
 |script|desc|
 |---|---|
-|[`display_time.bash`](display_time.bash) | extract "EPrime" PC task start time from log|
+|[`lncdtask_display_time.bash`](lncdtask_display_time.bash) | extract "EPrime" PC task start time from log|
 |[`mr_time.bash`](mr_time.bash) | extract acquisition start time from first dicom in series|
-|[`merge.R`](merge.R)| merge times and explore the onset differences |
+|[`merge_luna_anti.R`](merge_luna_anti.R)| merge times and explore the onset differences |
 
 See [`Makefile`](Makefile) for recipes
 
@@ -31,9 +31,9 @@ See [`Makefile`](Makefile) for recipes
 | file | desc| 
 | ---- | ----| 
 | [`txt/combined_tdiff.csv`](txt/combined_tdiff.csv) | diff of differences, see [`merge.R`](merge.R) |
-| [`txt/combined_mr_task_times.csv`](txt/combined_mr_task_times.csv) | row per visit, merged times ready for inspecting | 
-| `txt/anti_task_display.tsv`      | `=` trigger recieved times from task/display PC| 
-| `txt/anti_task_mr.tsv`           | DICOM Acq Time headers | 
+| [`txt/combined_anti_times.csv`](txt/combined_anti_times.csv) | row per visit, merged times ready for inspecting | 
+| `txt/luna/anti_task_display.tsv`      | `=` trigger recieved times from task/display PC| 
+| `txt/luna/anti_task_mr.tsv`           | DICOM Acq Time headers | 
 
 
 ## Pull repo data (Git Large File Storage)

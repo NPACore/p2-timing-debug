@@ -1,29 +1,45 @@
 .PHONY: all run_diffs_over_date.png
 all: clock_drift.png
 
-txt/combined_mr_task_times.csv: txt/anti_task_mr.tsv txt/anti_task_display.tsv
-	./merge.R
 
-txt/anti_task_display.tsv:
-	./display_time.bash
+clock_drift.png: txt/luna/combined_anti_times.csv txt/luna/combined_habit_times.csv
+	./model_time.R
+	magick $@ -scale 25%  $@
 
-txt/anti_task_mr.tsv:
+
+## all eprime tasks
+txt/eprime_times.tsv: txt/EPrimeLogs/Phillips-D3-rest/*txt  txt/EPrimeLogs/Phillips-CENTRIM/*.txt txt/EPrimeLogs/Sarpal-MARS-C4_AXCPT/*.txt txt/EPrimeLogs/Clark-AlcPics_2023-2024/*.txt | txt/
+	./extract_eprime.pl $^ > $@
+
+## ncanda (mr only)
+txt/ncanda-alc/alc_task_mr.tsv: ./mr_time.bash | txt/ncanda-alc/
+	./mr_time.bash /disk/mace2/scan_data/WPC-6106/20*/*/ncanda-alcpic*  > $@
+
+## luna anti
+txt/luna/combined_anti_times.csv: txt/luna/anti_task_mr.tsv txt/luna/anti_task_display.tsv
+	./merge_luna_anti.R
+
+txt/luna/anti_task_display.tsv: | txt/luna/
+	./lncdtask_display_time.bash anti > $@
+
+txt/luna/anti_task_mr.tsv: ./mr_time.bash | txt/luna/
 	./mr_time.bash anti > $@
 
-txt/habit_task_mr.tsv:
+## luna habit
+txt/combined_habit_times.csv: txt/luna/habit_task_display.tsv txt/luna/habit_task_mr.tsv
+	./merge_luna_habit.R
+txt/luna/habit_task_mr.tsv: ./mr_time.bash | txt/luna/
 	./mr_time.bash habit > $@
-
-txt/habit_task_display.tsv:
+txt/luna/habit_task_display.tsv: | txt/luna/
 	jq -r '[input_filename, ([.events[]|.rt|select(.!= null)]|length), ."start-time".browser]|@tsv' /Volumes/L/bea_res/Data/Tasks/Habit/MR/1*_2*/*json > $@
 
+##  first pass at times
+
 # also made by merge.R
-run_diffs_over_date.png: txt/combined_mr_task_times.csv plot.R
+run_diffs_over_date.png: txt/combined_anti_times.csv plot.R
 	./plot.R
 	magick ./run_diffs_over_date.png -scale 30%  ./run_diffs_over_date.png
 
-txt/combined_habit_times.csv: txt/habit_task_display.tsv txt/habit_task_mr.tsv
-	./habit.R
 
-clock_drift.png: txt/combined_mr_task_times.csv txt/combined_habit_times.csv
-	./model_time.R
-	magick $@ -scale 25%  $@
+%/:
+	mkdir -p $@

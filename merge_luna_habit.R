@@ -6,9 +6,9 @@ library(dplyr)
 library(stringr)
 
 mr   <- read.table('txt/habit_task_mr.tsv',
-                   col.names=c("rundir","acqtime"),sep="\t") %>%
+                   col.names=c("rundir","acqtime", "tr"),sep="\t") %>%
    mutate(sesid=str_extract(rundir, '\\d{5}_\\d{8}'),
-          acqtime=ymd_hms(acqtime))
+          acqtime=ymd_hms(acqtime, tz = "America/New_York")|>with_tz("UTC"))
 
 # /Volumes/L/bea_res/Data/Tasks/Habit/MR/11668_20240620/sub-11668_task-mr_habit_ses-20240504_run-1_1718889196248.json	150	1718889196248
 task <- read.table('txt/habit_task_display.tsv',
