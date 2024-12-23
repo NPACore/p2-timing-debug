@@ -7,12 +7,16 @@ clock_drift.png: txt/luna/combined_anti_times.csv txt/luna/combined_habit_times.
 	magick $@ -scale 25%  $@
 
 
+## all epfid2d1 MR acquistions types for P2
+txt/mr_times_p2.tsv:
+	./affected_from_db.bash > $@
+
 ## all eprime tasks
 txt/eprime_times.tsv: txt/EPrimeLogs/Phillips-D3-rest/*txt  txt/EPrimeLogs/Phillips-CENTRIM/*.txt txt/EPrimeLogs/Sarpal-MARS-C4_AXCPT/*.txt txt/EPrimeLogs/Clark-AlcPics_2023-2024/*.txt | txt/
 	./extract_eprime.pl $^ > $@
 
 ## ncanda (mr only)
-txt/ncanda-alc/alc_task_mr.tsv: ./mr_time.bash | txt/ncanda-alc/
+txt/ncanda/alc_task_mr.tsv: ./mr_time.bash | txt/ncanda/
 	./mr_time.bash /disk/mace2/scan_data/WPC-6106/20*/*/ncanda-alcpic*  > $@
 
 ## luna anti

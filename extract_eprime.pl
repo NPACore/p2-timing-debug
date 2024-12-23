@@ -4,17 +4,7 @@ use Time::Piece;
 use open IN=>":encoding(utf-16)";
 use File::Basename 'basename';
 
-# get scanner start time combining:
-#  SessionStartDateTimeUtc: 2/1/2024 7:09:40 PM
-#  WaitForScanner.OnsetTime: 46713
-# 
-# get id from log file like
-#  Resting_plus_questionnaire_MNA-${YYYMMDD.ID}-1.txt
-
-# print tsv of session start time from (UTF-16 encoded) eprime text log file
-# combines SessionSTartDateTimeUtc with Onset time of '=' trigger
-#
-# 20241223WF - init, extracted from oneliner
+# 20241223WF - init, extracted from one liner
 
 if($#ARGV < 0 or "@ARGV" =~ /^-+h/){
    print <<HEREDOC;
