@@ -4,14 +4,30 @@
 ## Overview
 This repository demonstrates pulling task onset times from two independent sources, the task display computer and the scan computer, to check for mismatches as a result of erroneously missing TTL TR triggers (`=` sent to start the task).
 
-Using participant ID (and possibly session date), we can combine the two sources and explore timing differences.
+We can combine the two sources useing participant ID, session date, task name, and run number to explore timing differences.
 
-Unfortunately, we cannot directly compare onset times because the computer clocks are not synced. 
+Unfortunately, we cannot directly compare onset times because the computer clocks are not synced. But that can be tackled two different ways
 
-For the `AntiSaccade` task herein, we have two runs of the same task back to back and can compare the MR-display offset from run1 to run2 to check the task start time onsets. **If TTL was not sent when expected, this difference of differences will be non-zero and greater than the TR of the task acquisition**.
+  1. With enough display onset + MR onset pairs, we can model the offset and dift between the clocks.
+  2. For sessions with multiple back-to-back tasks or runs, for example the `AntiSaccade` task herein, we can compare the MR-display offset from run1 to run2 to check the task start time onsets. **If TTL was not sent when expected, this difference of differences will be non-zero and greater than the TR of the task acquisition**.
 
 
-To this end, we extract the participant ID and task start time for each source, merge the two datasets, and compare timing offsets.
+See [`Makefile`](Makefile) for recipes for both.
+
+## Modeling drift
+
+  * MR clock start time for all `epfid2d1` (bold EPI) are in [`txt/mr_times_p2.tsv`](txt/mr_times_p2.tsv).
+  * an example for parsing eprime logs is in [`extract_eprime.pl`](extract_eprime.pl).
+  * pairing the two (WIP) in [`merge.R`](merge.R). Currently (20241223), [`model_time.R`](model_time.R) has the most insight into the clock drift.
+
+
+![](clock_drift.png)
+
+MR time is moved into UTC timezone to avoid daylight savings time jumps. Still, the drift has discrete jumps likely from one clock being adjusted manually.
+
+## Example session diff
+
+![](run_diffs_over_date.png)
 
 |script|desc|
 |---|---|
@@ -19,16 +35,9 @@ To this end, we extract the participant ID and task start time for each source, 
 |[`mr_time.bash`](mr_time.bash) | extract acquisition start time from first dicom in series|
 |[`merge_luna_anti.R`](merge_luna_anti.R)| merge times and explore the onset differences |
 
-See [`Makefile`](Makefile) for recipes
 
-![](clock_drift.png)
 
-## Comparison
-(extreme outliers -- bad input data? -- removed)
-
-![](run_diffs_over_date.png)
-
-| file | desc| 
+| output file | desc| 
 | ---- | ----| 
 | [`txt/combined_tdiff.csv`](txt/combined_tdiff.csv) | diff of differences, see [`merge.R`](merge.R) |
 | [`txt/combined_anti_times.csv`](txt/combined_anti_times.csv) | row per visit, merged times ready for inspecting | 

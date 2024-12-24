@@ -1,22 +1,45 @@
+add_tasknum <- function(d) d|>
+    arrange(acqtime) |>
+    group_by(wpc,sess_id,sess_day=format(acqtime,"%Y%m%d"))|>
+    mutate(task_num=rank(acqtime)) |> ungroup() |> select(-sess_day)
+
+add_hr <- function(d) d|>mutate(acqhr=format(acqtime,"%Y%m%dT%H"))
+
 all_display <-
     readr::read_delim(Sys.glob('txt/*norm.tsv'), delim="\t") |>
-    mutate(acqtime_hr=gsub(':\\d+:\\d+$','',acqtime),
-           acqtime=lubridate::ymd_hms(acqtime))
+    mutate(acqtime=lubridate::ymd_hms(acqtime)) |>
+    add_tasknum()
 
-mr <- read.table(text=system("sed 's/ /\t/g' txt/mr_times.tsv", intern=T),
+mr <- read.table(#text=system(intern=T, "sed 's/ /\t/g' txt/luna/*_task_mr.tsv"),
+                 "txt/mr_times_p2.tsv",
                  sep="\t",
                  colClasses='character',
                  col.names=c("rundir","acqdate", "acqtime", "tr")) %>%
     mutate(acqdt=paste0(acqdate," ", substr(acqtime,1,2) ,":", substr(acqtime,3,4) ,":", substr(acqtime,5,99)),
            acqtime=ymd_hms(acqdt, tz = "America/New_York")|>with_tz("UTC"),
-           acqtime_hr=format(acqtime,"%Y-%m-%d %H"),
-           wpc=stringr::str_extract(rundir,'(?<=scan_data/)[A-Za-z]+-\\d+')
+           wpc=stringr::str_extract(rundir,'(?<=scan_data/)[A-Za-z]+-\\d+'),
+           sess_id=stringr::str_extract(rundir,'(?<=\\.[0-9]{2}\\.[0-9]{2}/)[^/]+'),
+           name=gsub('_[0-9x.]+$','',basename(rundir)),
+           series=stringr::str_extract(rundir,'(?<=\\.)[0-9]+$'),
+           rundir=gsub('.*scan_data/','',rundir)
            ) %>%
-    select(-acqdate, -acqdt)
+    select(-acqdate, -acqdt) |>
+    add_tasknum()
 
-matched <- merge(mr, all_display, by="acqtime_hr",all=F,suffixes=c("_mr","_disp")) |>
-    mutate(tdiff=seconds(acqtime_mr-acqtime_disp)) |>
-    group_by(acqtime_hr,sess_id,task) |> filter(abs(tdiff)==min(abs(tdiff))) |>
+matched <- merge(mr, all_display, all=F,suffixes=c("_mr","_disp")) |>
+    mutate(tdiff=seconds(acqtime_mr-acqtime_disp), task_diff=task_num_mr-task_num_disp) |>
+    #group_by(acqtime_hr,sess_id,task) |> filter(abs(tdiff)==min(abs(tdiff))) |>
+    #ungroup()|>group_by(acqtime_hr,acqtime_mr) |> filter(abs(tdiff)==min(abs(tdiff))) |>
     arrange(acqtime_hr)
+write.csv(matched, 'txt/combined_normalized.tsv', quote=F, row.names=F)
 
-matched %>% ungroup() |> transmute(acqtime_mr,acqtime_disp, wpc_mr,wpc_disp, tdiff=round(tdiff), rundir)
+## easy viewing
+hmsf <- function(x) format(x, "%H:%M:%S")
+match_view <-matched %>% ungroup() |>
+    transmute(mr=hmsf(acqtime_mr),disp=hmsf(acqtime_disp),
+              wpc_mr, wpc_disp,
+              tdiff=round(tdiff),
+              task_diff,
+              sess_id_disp, task, run,
+              dir=gsub('.*\\.[0-9]{2}\\.[0-9]{2}/','',rundir))
+match_view |> filter(!grepl('8620',wpc_mr), task_diff==0)
