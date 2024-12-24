@@ -8,7 +8,8 @@ habit <-
            col.names=c("fname","nrt", "acqtime"),sep="\t") |>
    transmute(
           sess_id=str_extract(fname, '\\d{5}_\\d{8}'),
-          task="habit",
+          # match MR dicom header for sequence name
+          task="HabitTask",
           run=1,
           acqtime=as_datetime(acqtime/1000))
 anti <- 
@@ -16,9 +17,14 @@ anti <-
                    col.names=c("sesid","run","acqtime"),sep="\t") |>
    transmute(
           sess_id=sesid,
-          task='anti',
-          run=as.numeric(gsub('-.*','',run)),
-          acqtime=as_datetime(acqtime))
+          run=1,
+          task_run=as.numeric(gsub('-.*','',run)),
+          # match MR dicom header for sequence name
+          task=case_when(task_run==1~~'RewardedAntisaccade',
+                         task_run==2~~'RewardedAntisaccade_repeat',
+                         .default='RewardedAntisaccade_ERROR')
+          acqtime=as_datetime(acqtime)) |>
+   select(-taskrun)
 
 wpc8620 <- rbind(anti,habit) |>
   mutate(wpc="WPC-8620") |> relocate(wpc) |>
