@@ -17,14 +17,14 @@ anti <-
                    col.names=c("sesid","run","acqtime"),sep="\t") |>
    transmute(
           sess_id=sesid,
-          run=1,
           task_run=as.numeric(gsub('-.*','',run)),
           # match MR dicom header for sequence name
-          task=case_when(task_run==1~~'RewardedAntisaccade',
-                         task_run==2~~'RewardedAntisaccade_repeat',
-                         .default='RewardedAntisaccade_ERROR')
+          task=case_when(task_run==1~'RewardedAntisaccade',
+                         task_run==2~'RewardedAntisaccade_repeat',
+                         .default='RewardedAntisaccade_ERROR'),
+          run=1,
           acqtime=as_datetime(acqtime)) |>
-   select(-taskrun)
+   select(-task_run)
 
 wpc8620 <- rbind(anti,habit) |>
   mutate(wpc="WPC-8620") |> relocate(wpc) |>

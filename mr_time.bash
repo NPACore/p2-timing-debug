@@ -7,7 +7,11 @@ get_acq_times(){
 first_time(){ sort -n | sed 1q; }
 
 mr_times_of_pdirs(){
+
+  cnt=1
   for run in "$@"; do
+    [ $(( $cnt % 100)) -eq 0 ] && echo "# [$(date)] $cnt $run" >&2
+    let ++cnt
     ! test -d "$run" && echo "# ERROR: '$run' is not a directory" >&2 && continue
     time_first=$(get_acq_times "$run" | first_time || :)
     [ -z "$time_first" ] && echo "# ERROR: '$run' missing dicom headers?" >&2 && continue

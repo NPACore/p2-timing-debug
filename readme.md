@@ -28,6 +28,7 @@ Computer clocks drift [due to frequency error](https://www.ntp.org/ntpfaq/ntp-s-
 
 
 ![](clock_drift.png)
+![](clock_drift_lm.png)
 
 MR time is moved into UTC timezone to avoid daylight savings time jumps. Still, the drift has discrete jumps likely from one clock being adjusted manually.
 

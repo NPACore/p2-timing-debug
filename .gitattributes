@@ -14,3 +14,4 @@ txt/luna/anti_task_ filter=lfs diff=lfs merge=lfs -text
 txt/luna/anti_task_mr.tsv filter=lfs diff=lfs merge=lfs -text
 txt/eprime_times.tsv filter=lfs diff=lfs merge=lfs -text
 txt/mr_times_p2.tsv filter=lfs diff=lfs merge=lfs -text
+clock_drift_lm.png filter=lfs diff=lfs merge=lfs -text
