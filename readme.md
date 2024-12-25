@@ -6,19 +6,32 @@ This repository demonstrates pulling task onset times from two independent sourc
 
 We can combine the two sources useing participant ID, session date, task name, and run number to explore timing differences.
 
-Unfortunately, we cannot directly compare onset times because the computer clocks are not synced. But that can be tackled two different ways
+Unfortunately, we cannot directly compare onset times because the computer clocks are not synced. But that can be tackled different ways
 
   1. With enough display onset + MR onset pairs, we can model the offset and dift between the clocks.
   2. For sessions with multiple back-to-back tasks or runs, for example the `AntiSaccade` task herein, we can compare the MR-display offset from run1 to run2 to check the task start time onsets. **If TTL was not sent when expected, this difference of differences will be non-zero and greater than the TR of the task acquisition**.
+  3. deconvolve high HRF responses in fMRI task data with a TENT model to measure peak response against expected time
 
 
 See [`Makefile`](Makefile) for recipes for both.
 
+## Notes on timing
 
 Computer clocks drift [due to frequency error](https://www.ntp.org/ntpfaq/ntp-s-sw-clocks-quality/)
 > Even if the systematic error of a clock model is known, the clock will never be perfect. This is because the frequency varies over time, mostly influenced by temperature, ... or magnetic fields.
 > ... oscillator’s correction value increases by about 11 PPM..
 > .. 12 PPM correspond to one second per day 
+
+On the scan side, first dicom's `Acquisition Time` is the closest to the pulse send time (see [`mr_time.bash`](mr_time.bash)).
+[neurostars](https://neurostars.org/t/dicom-header-acquisition-time-study-time-series-time-content-time/23280/2), [snug-discuss](https://www.snug-discuss.org/t/what-is-relationship-between-acquisitiontime-in-dicom-and-trigger-pulse/490/3)
+> (0008,0032) Acquisition Time → MARS timestamp
+> MHD.DICOM.AcquisitionTime is defined by the timestamp of the first ‘imaging’ Readout of a certain slice (Mdh.isImagingScan(), Mdh.getTimeStamp()).
+
+On the task side, 
+ * E-Prime logs session start (task loaded, `SessionSTartDateTimeUtc`) with only second precision (?)  and hopefully first `=` translated scanner TR pulse like `WaitForScanner.OnsetTime` in milliseconds. See [`extract_eprime.pl`](extract_eprime.pl).
+ * PsychoPy can record flip time in unix epoch. See [`lncdtask_display_time.bash`](lncdtask_display_time.bash).
+ * In psychtoolbox, on Windows, `GetSecs()` is ["number of seconds since system start up"](http://psychtoolbox.org/docs/GetSecs) and will need an additional timestamp to covert events to time. Maybe file modification time?
+
 
 ## Modeling drift
 
