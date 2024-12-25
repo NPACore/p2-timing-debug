@@ -14,6 +14,12 @@ Unfortunately, we cannot directly compare onset times because the computer clock
 
 See [`Makefile`](Makefile) for recipes for both.
 
+
+Computer clocks drift [due to frequency error](https://www.ntp.org/ntpfaq/ntp-s-sw-clocks-quality/)
+> Even if the systematic error of a clock model is known, the clock will never be perfect. This is because the frequency varies over time, mostly influenced by temperature, ... or magnetic fields.
+> ... oscillator’s correction value increases by about 11 PPM..
+> .. 12 PPM correspond to one second per day 
+
 ## Modeling drift
 
   * MR clock start time for all `epfid2d1` (bold EPI) are in [`txt/mr_times_p2.tsv`](txt/mr_times_p2.tsv).
