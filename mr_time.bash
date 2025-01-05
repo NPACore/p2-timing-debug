@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 get_acq_times(){
+  # tab seprated dicom header values:
+  # fname date time TR station
+  # TODO: speed up by sorting file names and taking first?
   find "${1:?input dicom folder to get times}"  \
     -iname 'MR*' \
-    -exec dicom_hinfo -sepstr $'\t' -no_name -tag 0008,0022 -tag 0008,0032 -tag 0018,0080 {} \+ || :
+    -exec dicom_hinfo -no_name -sepstr $'\t' \
+       -tag 0008,0022 -tag 0008,0032 -tag 0018,0080 -tag 0008,1010 {} \+ || :
 }
 first_time(){ sort -n | sed 1q; }
 
@@ -30,7 +34,8 @@ if [[ "$(caller)" == "0 "* ]]; then
   trap 'e=$?; [ $e -ne 0 ] && echo "$0 exited in error $e" >&2' EXIT
   [ $# -lt 1 ] && usage "ERROR: need a study or path to work on"
   case "$1" in
-     anti) all_runs=(/disk/mace2/scan_data/WPC-8620/2*/1*_2*/*RewardedAnti*[^f]_704*/);;
+     #anti) all_runs=(/disk/mace2/scan_data/WPC-8620/2*/1*_2*/*RewardedAnti*[^f]_704*/);;
+     anti) all_runs=(/Volumes/Hera/Raw/MRprojects/Habit/2*/1*_2*/*RewardedAnti*[^f]_704*/);;
      habit) all_runs=(/Volumes/Hera/Raw/MRprojects/Habit/2*/1*_2*/HabitTask_704x752.*/);;
      *) test -d $1 || usage "ERROR: unknown study '$1' is not a directory/protocol dir";
         all_runs=("$@");;
