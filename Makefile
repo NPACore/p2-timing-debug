@@ -21,7 +21,7 @@ txt/ncanda/alc_task_mr.tsv: ./mr_time.bash | txt/ncanda/
 
 ## luna anti
 txt/luna/combined_anti_times.csv: txt/luna/anti_task_mr.tsv txt/luna/anti_task_display.tsv
-	./merge_luna_anti.R
+	./luna/merge_luna_anti.R
 
 txt/luna/anti_task_display.tsv: | txt/luna/
 	./lncdtask_display_time.bash anti > $@
@@ -31,7 +31,7 @@ txt/luna/anti_task_mr.tsv: ./mr_time.bash | txt/luna/
 
 ## luna habit
 txt/combined_habit_times.csv: txt/luna/habit_task_display.tsv txt/luna/habit_task_mr.tsv
-	./merge_luna_habit.R
+	./luna/merge_luna_habit.R
 txt/luna/habit_task_mr.tsv: ./mr_time.bash | txt/luna/
 	./mr_time.bash habit > $@
 txt/luna/habit_task_display.tsv: | txt/luna/
