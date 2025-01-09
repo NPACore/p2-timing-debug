@@ -16,3 +16,4 @@ txt/eprime_times.tsv filter=lfs diff=lfs merge=lfs -text
 txt/mr_times_p2.tsv filter=lfs diff=lfs merge=lfs -text
 clock_drift_lm.png filter=lfs diff=lfs merge=lfs -text
 txt/luna/all_with_station.tsv filter=lfs diff=lfs merge=lfs -text
+argo/diff-of-diff.png filter=lfs diff=lfs merge=lfs -text
