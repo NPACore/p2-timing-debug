@@ -37,6 +37,13 @@ txt/luna/habit_task_mr.tsv: ./mr_time.bash | txt/luna/
 txt/luna/habit_task_display.tsv: | txt/luna/
 	jq -r '[input_filename, ([.events[]|.rt|select(.!= null)]|length), ."start-time".browser]|@tsv' /Volumes/L/bea_res/Data/Tasks/Habit/MR/1*_2*/*json > $@
 
+## TeenSCREEN
+txt/BridgeTeenSceen/tasks.tsv:
+	./extract_eprime.pl txt/EPrimeLogs/TeenSCREEN/*txt > $@
+
+txt/BridgeTeenSceen/mr_times.tsv:
+	./mr_time.bash /Volumes/argo/Studies/TeenSCREEN/Public/Analysis/raw/complete/*/*func-* > $@ 
+
 ##  first pass at times
 
 # also made by merge.R

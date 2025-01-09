@@ -58,7 +58,7 @@ foreach my $fname (@ARGV) {
     }
 
     # seen PreSipRating.OnsetTime (ncanda alc), WaitForScanner, and WaitForScanner1 
-    if(/(PreSipRating|WaitForScanner.*)\.OnsetTime: (\d+)/){
+    if(/(PreSipRating|WaitRF|WaitForScanner.*)\.OnsetTime: (\d+)/){
         $offset=$2;
      }
  }

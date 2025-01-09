@@ -4,7 +4,7 @@ get_acq_times(){
   # fname date time TR station
   # TODO: speed up by sorting file names and taking first?
   find "${1:?input dicom folder to get times}"  \
-    -iname 'MR*' \
+    \( -iname '*.dcm' -or -iname 'MR*' \) \
     -exec dicom_hinfo -no_name -sepstr $'\t' \
        -tag 0008,0022 -tag 0008,0032 -tag 0018,0080 -tag 0008,1010 {} \+ || :
 }
