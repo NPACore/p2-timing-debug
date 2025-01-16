@@ -32,6 +32,22 @@ On the task side,
  * PsychoPy can record flip time in unix epoch. See [`lncdtask_display_time.bash`](lncdtask_display_time.bash).
  * In psychtoolbox, on Windows, `GetSecs()` is ["number of seconds since system start up"](http://psychtoolbox.org/docs/GetSecs) and will need an additional timestamp to covert events to time. Maybe file modification time?
 
+## HRF
+Here are two individual runs with button pushes modeled using `TENT`. The top run was triggered when expected whereas the bottom was tiggered late but modeled with stim onsets as if the task startd when expected. The cross hairs are focused on motor cortex. You can see the response is delayed in the bottom plot (index 5 instead of index 2).
+![](afni_hrf.png)
+
+```
+3dDeconvolve \
+      -overwrite \
+      -input "$habit_task" \
+      -jobs 32 \
+      -num_stimts 1 \
+      -ortvec "$regs" confounds \
+      -stim_times 1 "$eventd/button.1d"  'TENT(0,13,11)'  -stim_label 1 all_pushes \
+      -bucket  "${outprefix}_bucket.nii.gz" \
+      -iresp 1 "${outprefix}_iresp.nii.gz" \
+      -fout -rout
+```
 
 ## Modeling drift
 
