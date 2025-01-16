@@ -1,0 +1,123 @@
+#+TITLE: MIND
+* Inputs
+
+EPrime task computer and MR clock differences collated and compared in MATLAB.
+#+begin_src R  :session
+header_names <- function(d, ...) d |> names() |> paste(collapse=",")
+df_info <- function(d) c(substitute(d), nrow(d), header_names(d))
+
+mind_vabf<- readxl::read_excel('./MIND_VABF_stimtiming.xlsx')
+stim_ep <- readxl::read_excel('./stimtiming_eprime.xlsx')
+stims <- read.csv('./stimtiming.csv')
+rbind(df_info(mind_vabf), df_info(stim_ep), df_info(stims))
+#+end_src
+
+#+RESULTS:
+| mind_vabf |  98 | id,date,Pre1diff,Pre2Diff,Post1diff,Post2diff,Pre1BehTime,Pre2BehTime,Post1yBehTime,Post2BehTime,Pre1AcqTime,Pre2AcqTime,Post1AcqTime,Post2AcqTime                      |
+| stim_ep   | 178 | id,date,as_minddiff,as_faniDiff,rfmridiff,eegcaldiff,as_mindBehTime,as_faniBehTime,rfmriyBehTime,eegcalBehTime,as_mindAcqTime,as_faniAcqTime,rfmriAcqTime,eegcalAcqTime |
+| stims     | 100 | id,date,Pre1diff,Pre2Diff,Post1diff,Post2diff,Pre1BehTime,Pre2BehTime,Post1yBehTime,Post2BehTime,Pre1AcqTime,Pre2AcqTime,Post1AcqTime,Post2AcqTime,X                    |
+
+*
+#+begin_src R :session :colnames yes
+library(dplyr); library(tidyr)
+update_date <- function(dt_in, ref) { lubridate::date(dt_in) <- as.Date(ref); return(dt_in); }
+                                        # add date to time columns to make ploting easier
+d <- stim_ep |> mutate(across(matches('Time'), \(x) update_date(x, `date`)))
+                                        # update names to easily "gather"
+names(d) <- gsub('[Dd]iff$','_diff', names(d)) %>% gsub('^as_','',.) %>% gsub('(Beh|Acq)Time','_\\1',.) %>% gsub('rfmriy','rfmri',.)
+times <- d |>
+  pivot_longer(matches('diff|Acq|Beh'), names_sep="_", names_to=c("task",".value")) |>
+  mutate(tdiff=Beh-Acq) |>
+  arrange(Acq)
+times |> head()
+#+end_src
+
+#+RESULTS:
+| id      |       date | task   |  diff | Beh                    | Acq                    |            tdiff |
+|---------+------------+--------+-------+------------------------+------------------------+------------------|
+| 95000_3 | 2021-10-18 | fani   | -0.64 | 2021-10-18 11:29:19.48 | 2021-10-18 11:28:41.25 | 38.2300000190735 |
+| 95000_3 | 2021-10-18 | mind   | -1.13 | 2021-10-18 11:38:28.77 | 2021-10-18 11:37:50.05 | 38.7199997901917 |
+| 95000_3 | 2021-10-18 | eegcal | -0.62 | 2021-10-18 12:10:59.29 | 2021-10-18 12:10:21.08 |  38.210000038147 |
+| 95000_3 | 2021-10-18 | rfmri  |     0 | 2021-10-18 12:20:17.49 | 2021-10-18 12:19:39.91 | 37.5799999237061 |
+| 95001_3 | 2021-11-01 | rfmri  | -9.41 | 2021-11-01 11:42:45.85 | 2021-11-01 11:42:27.48 | 18.3699998855591 |
+| 95001_3 | 2021-11-01 | fani   | -4.68 | 2021-11-01 11:52:56.61 | 2021-11-01 11:52:42.97 | 13.6400003433228 |
+
+#+begin_src R :session :file drift.png :results output graphics file :width 600 :height 400
+library(ggplot2)
+p.drift <- times |> filter(abs(tdiff)<300) |>
+ ggplot() + aes(x=Acq,y=tdiff, color=task) + geom_point() +
+ theme_bw() +
+ labs(title="Clock Drift", y="TaskPC - MR", x="MR Time", color="Task")
+print(p.drift)
+#+end_src
+
+#+RESULTS:
+[[file:drift.png]]
+
+#+begin_src bash :eval never :exports both
+for d in /disk/mace2/scan_data/WPC-8399/2024.12.16-10.57.20/95147_3/{{eegcal,as_mind,as_fani}_tfmri_6,rfmri_7}*/; do find $d -type f -iname 'MR*' -exec dicom_hinfo -tag 0018,0080 {} \+ -quit; done
+#+end_src
+
+#+RESULTS:
+: eegcal_tfmri_616x616.37  1200
+: as_mind_tfmri_616x616.15 1200
+: as_fani_tfmri_616x616.12 1200
+: rfmri_704x704.28          750
+
+#+begin_src R :session :file dod.png :results output graphics file :width 600 :height 400
+TR <- 1.2 # TODO: add to dataframe? rest is faster: .75
+
+tdiff <- times %>%
+  group_by(id,date) %>%
+  arrange(Acq) %>%
+                                        # TODO: lag and lead
+  mutate(dod=tdiff-lag(tdiff))
+
+p_dod <-
+  tdiff |> filter(abs(tdiff) < 300) |>
+  ggplot() +
+  aes(shape=task, x=Acq, y=Beh-Acq, color=as.numeric(dod))+
+  geom_point() +
+  scale_shape_manual(values=c(20,22,1,2)) +
+  scale_color_gradient2(high="red", low="red", mid="black", limits=c(-3,3)*TR,
+                        breaks=c(-3,0,3)*TR, oob=scales::squish) +
+  see::theme_modern() +
+  labs(color="Diff-of-diff", x="Acq Date", shape="Task")
+print(p_dod)
+#+end_src
+
+#+RESULTS:
+[[file:dod.png]]
+
+#+begin_src R :session :file tr.png :results output graphics file :width 1024 :height 600
+
+p.data <- tdiff %>%
+                                        #filter(scale(abs(tdiff),center=T) < 2) %>%
+  filter(abs(dod) < 60) %>%
+  mutate(TTLerror=abs(dod)>TR,
+         label=paste0(round(dod/TR,1),' TRs'))
+
+p_tr <-
+  ggplot(p.data) +
+  aes(y=dod, x=date, color=TTLerror) +
+                                        # show TR
+  geom_hline(yintercept=c(-1,1)*TR, color='green', linetype=2) +
+  geom_line(aes(group=paste(id,`date`)),alpha=.3) +
+  geom_label(data=filter(p.data, TTLerror),
+             aes(label=label, color=NULL),
+             vjust=1,hjust=-.1, alpha=.3, size=3) +
+  geom_point(aes(shape=task)) +
+                                        #cowplot::theme_cowplot() +
+  see::theme_modern() +
+  theme(axis.title.y = element_text(size = 14)) +
+  labs(y=expression(run1["task-mr"] - run2['task-mr'] ~ (s)),
+       x='acquisition date') +
+  scale_color_manual(values=c("black","red"), guide="none") +
+  scale_shape_manual(values=c(20,22,1,2))
+
+print(p_tr)
+#print(cowplot::plot_grid(p_dod, p_tr,nrow=2))
+#+end_src
+
+#+RESULTS:
+[[file:tr.png]]
