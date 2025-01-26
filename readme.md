@@ -2,6 +2,9 @@
 
 
 ## Overview
+
+The MRRC Prisma 2 fiber to copper TTL converter box likely started failing in 2023-07 and was caught and replaced 2024-12.
+
 This repository demonstrates pulling task onset times from two independent sources, the task display computer and the scan computer, to check for mismatches as a result of erroneously missing TTL TR triggers (`=` sent to start the task).
 
 We can combine the two sources useing participant ID, session date, task name, and run number to explore timing differences.
@@ -13,7 +16,7 @@ Unfortunately, we cannot directly compare onset times because the computer clock
   3. deconvolve high HRF responses in fMRI task data with a TENT model to measure peak response against expected time
 
 
-See [`Makefile`](Makefile) for recipes for both.
+See [`Makefile`](Makefile) for recipes.
 
 ## Notes on timing
 
