@@ -74,11 +74,21 @@ times <- merge(mr_p1, tasks,
    select(pid,station,vdate,task,run,matches('acqtime'), tr) %>%
    mutate(tdiff=time_length(acqtime_task - acqtime_mr, 'seconds'))
 
+# from richfitz/TRAMPR/blob/master/R/util.R
+absolute.min <- function(x)
+  if ( all(is.na(x)) && length(x) ) NA else x[which.min(abs(x))]
+
+signed_absmin <- function(x,y) {
+    apply(cbind(x, y), 1, absolute.min)
+}
+
 tdiff <- times %>%
    mutate(vdate=ymd(vdate)) %>%
    group_by(pid,vdate,station,tr) %>%
    arrange(acqtime_mr) %>%
-   mutate(tdiff=tdiff-lag(tdiff))
+   mutate(dod_lag=tdiff-lag(tdiff),
+          dod_lead=lead(tdiff)-tdiff,
+          dod = signed_absmin(dod_lag,dod_lead))
 
 # AWP167046=p2, MRC67078=p1
 tdiff %>% filter(grepl("MRC", station)) |> print.data.frame()
@@ -86,27 +96,50 @@ tdiff %>% filter(grepl("MRC", station)) |> print.data.frame()
 
 p.data <- tdiff %>%
    #filter(scale(abs(tdiff),center=T) < 2) %>%
-   filter(abs(tdiff) < 30) %>%
+   filter(abs(dod) < 30) %>%
    mutate(vdate=lubridate::ymd(vdate),
-          TTLerror=abs(tdiff)>tr,
-          label=paste0(round(tdiff/tr,1),' TRs'))
+          TTLerror=abs(dod)>tr,
+          tr_off = round(dod/tr,1),
+          label=paste0(tr_off,' TRs'))
+
+write.csv(p.data,file="txt/luna/diff-of-diff.csv")
 
 TR <- mean(as.numeric(times$tr))
 p <-
    ggplot(p.data) +
-   aes(y=tdiff, x=vdate, color=TTLerror) +
+   aes(y=dod, x=vdate, color=TTLerror) +
    # show TR
    geom_hline(yintercept=c(-1,1)*TR, color='green', linetype=2) +
    geom_line(aes(group=paste(pid,vdate)),alpha=.3) +
    geom_label(data=filter(p.data, TTLerror),
               aes(label=label, color=NULL),
               vjust=1,hjust=-.1, alpha=.3, size=3) +
-   geom_point(aes(shape=task)) +
+   geom_point(aes(shape=paste0(task,run))) +
    #cowplot::theme_cowplot() +
    see::theme_modern() +
    theme(axis.title.y = element_text(size = 14)) +
    labs(y=expression(run1["task-mr"] - run2['task-mr'] ~ (s)),
-        x='acquisition date') +
+        x='acquisition date',
+        shape="Task") +
    scale_color_manual(values=c("black","red"), guide="none") +
-   scale_shape_manual(values=c(20,22)) +
-   facet_grid(station~.)
+   scale_shape_manual(values=c(20,22,23)) #+
+   #facet_grid(station~.)
+
+####
+
+tdiff |>
+ ungroup() |>
+ filter(vdate>'2023-07-01', !is.na(dod), abs(dod)<30) |>
+ count(ttl_missing = abs(dod)>1.5)
+
+#
+cowplot::plot_grid(ncol=2,nrow=1,
+ ggplot(p.data) +
+    aes(x=tr_off %% 1, fill=TTLerror) +
+    #geom_histogram(position='dodge') +
+    geom_density(alpha=.7) +
+    see::theme_modern(),
+ ggplot(p.data) +
+    aes(x=tr_off %% 1, fill=TTLerror) +
+    geom_histogram(position='dodge') +
+    see::theme_modern())

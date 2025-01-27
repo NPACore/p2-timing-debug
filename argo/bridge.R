@@ -56,10 +56,20 @@ times <- merge(mr, tasks,
    select(sesid,station,task,matches('acqtime'), tr) %>%
    mutate(tdiff=time_length(acqtime_task - acqtime_mr, 'seconds'))
 
+
+# from richfitz/TRAMPR/blob/master/R/util.R
+absolute.min <- function(x)
+  if ( all(is.na(x)) && length(x) ) NA else x[which.min(abs(x))]
+
+signed_absmin <- function(x,y) {
+    apply(cbind(x, y), 1, absolute.min)
+}
 tdiff <- times %>%
    group_by(sesid,station,tr) %>%
    arrange(acqtime_mr) %>%
-   mutate(dod=tdiff-lag(tdiff))
+   mutate(dod_lag=tdiff-lag(tdiff),
+          dod_lead=lead(tdiff)-tdiff,
+          dod = signed_absmin(dod_lag,dod_lead))
 
 p.data <- tdiff %>%
    #filter(scale(abs(tdiff),center=T) < 2) %>%
@@ -75,17 +85,17 @@ p_tr <-
    # show TR
    geom_hline(yintercept=c(-1,1)*TR, color='green', linetype=2) +
    geom_line(aes(group=paste(sesid,vdate)),alpha=.3) +
-   geom_label(data=filter(p.data, TTLerror),
+   geom_text(data=filter(p.data, TTLerror),
               aes(label=label, color=NULL),
               vjust=1,hjust=-.1, alpha=.3, size=3) +
    geom_point(aes(shape=task)) +
    #cowplot::theme_cowplot() +
    see::theme_modern() +
    theme(axis.title.y = element_text(size = 14)) +
-   labs(y=expression(run1["task-mr"] - run2['task-mr'] ~ (s)),
+   labs(y=expression("abs.min(lead,lag) diff"["task-mr"] ~ (s)),
         x='acquisition date') +
    scale_color_manual(values=c("black","red"), guide="none") +
-   scale_shape_manual(values=c(20,22,1))
+   scale_shape_manual(values=c(20,22,23))
 
 p_dod <-
  tdiff |> filter(abs(tdiff) < 1000) |>
