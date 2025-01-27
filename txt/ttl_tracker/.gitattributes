@@ -4,3 +4,4 @@ mr.tsv filter=lfs diff=lfs merge=lfs -text
 sub-badttL_ses-1_task-rest_run-1-1736883815.log filter=lfs diff=lfs merge=lfs -text
 sub-badttl_ses-1_task-rest_run-1-1736884513.log filter=lfs diff=lfs merge=lfs -text
 sub-badttl_ses-1_task-rest_run-3-1736885089.log filter=lfs diff=lfs merge=lfs -text
+mr_onsets_all.txt filter=lfs diff=lfs merge=lfs -text
