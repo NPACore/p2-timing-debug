@@ -1,3 +1,6 @@
 MIND_VABF_stimtiming.xlsx filter=lfs diff=lfs merge=lfs -text
 stimtiming_eprime.xlsx filter=lfs diff=lfs merge=lfs -text
 stimtiming.csv filter=lfs diff=lfs merge=lfs -text
+dod.png filter=lfs diff=lfs merge=lfs -text
+drift.png filter=lfs diff=lfs merge=lfs -text
+tr.png filter=lfs diff=lfs merge=lfs -text
