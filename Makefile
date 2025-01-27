@@ -47,6 +47,9 @@ txt/BridgeTeenSceen/mr_times.tsv:
 argo/diff-of-diff.png:
 	Rscript argo/bridge.R
 
+txt/ttl_tracker/mr_onsets_all.txt:
+	ALL_MR_TIMES=1 ./mr_time.bash ttl-test-data/test-bad-ttl/scans/*/resources/DICOM/files/ | perl -pe 's:.*/(\d+-[^/]+).*/files/:\1:' > $@
+
 ##  first pass at times
 
 # also made by merge.R

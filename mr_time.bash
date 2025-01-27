@@ -17,14 +17,19 @@ mr_times_of_pdirs(){
     [ $(( $cnt % 100)) -eq 0 ] && echo "# [$(date)] $cnt $run" >&2
     let ++cnt
     ! test -d "$run" && echo "# ERROR: '$run' is not a directory" >&2 && continue
-    time_first=$(get_acq_times "$run" | first_time || :)
+
+    # with ALL_MR_TIMES set, will print all dicom times  instead of just the very first
+    [ -n "${ALL_MR_TIMES:-}" ] && func=cat || func=first_time
+    time_first=$(get_acq_times "$run" | $func || :)
     [ -z "$time_first" ] && echo "# ERROR: '$run' missing dicom headers?" >&2 && continue
-    echo -e "$run\t$time_first"
+    #echo -e "$run\t$time_first"
+    sed "s:^:$run\t:" <<< "$time_first"
   done
 }
 
 usage(){
   echo "USAGE: $0 [anti|habit|/path/to/ses/id/pdir*glob]" >&2
+  echo "   ALL_MR_TIMES=1 $0 ... # to get all volume times" >&2
   echo "$*" >&2
   exit
 }
