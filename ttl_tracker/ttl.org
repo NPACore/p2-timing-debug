@@ -55,25 +55,34 @@ task_mr_cnt <- cbind(mr_cnt,task_cnt)
 | 19-rfmri_good_ttl |  600 | 2025-01-14 20:30:16.7875 | 2025-01-14 20:37:46.0375 | 750 | goodttl_ses-1_task-rest_run-2 |    600 | 2025-01-14 20:27:50.7556 | 2025-01-14 20:35:19.9986 | 449.243000030518 |
 
 #+begin_src R :session :exports both :colnames yes
-n_missed <- task_mr_cnt |> transmute(seq,fname,n_missed_ttl = mr_n-task_n)
+n_missed <- task_mr_cnt |>
+  transmute(seq,fname,n_missed_ttl = mr_n-task_n,
+            percent_missing=sprintf("%.2f%%", n_missed_ttl/600*100))
 #+end_src
 
 #+RESULTS:
-| seq               | fname                         | n_missed_ttl |
-|-------------------+-------------------------------+--------------|
-| 3-rfmri           | badttL_ses-1_task-rest_run-1  |          185 |
-| 9-rfmri           | badttl_ses-1_task-rest_run-2  |          174 |
-| 11-rfmri          | badttl_ses-1_task-rest_run-3  |          281 |
-| 17-rfmri_good_ttl | goodttl_ses-1_task-rest_run-1 |            0 |
-| 19-rfmri_good_ttl | goodttl_ses-1_task-rest_run-2 |            0 |
+| seq               | fname                         | n_missed_ttl | percent_missing |
+|-------------------+-------------------------------+--------------+-----------------|
+| 3-rfmri           | badttL_ses-1_task-rest_run-1  |          185 |          30.83% |
+| 9-rfmri           | badttl_ses-1_task-rest_run-2  |          174 |          29.00% |
+| 11-rfmri          | badttl_ses-1_task-rest_run-3  |          281 |          46.83% |
+| 17-rfmri_good_ttl | goodttl_ses-1_task-rest_run-1 |            0 |           0.00% |
+| 19-rfmri_good_ttl | goodttl_ses-1_task-rest_run-2 |            0 |           0.00% |
 
-
+** missing
 #+begin_src R :session :exports both
 sum(n_missed$n_missed_ttl)
 #+end_src
 
 #+RESULTS:
 : 640
+
+#+begin_src R :session :exports both
+sprintf('%.2f %%', sum(n_missed$n_missed_ttl)/(3*600)*100)
+#+end_src
+
+#+RESULTS:
+: 35.56 %
 
 ** missingness distribution
 #+begin_src R :session :exports both :results output graphics file :file ttl_diff_dist.png
