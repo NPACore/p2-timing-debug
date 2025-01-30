@@ -14,7 +14,7 @@ library(tidyr)
 source('../support.R') # lead_lag_dod
 
 # timestamp of every volume from DICOM header
-mr <- read_tsv('txt/ttl_tracker/mr_onsets_all.txt',
+mr <- read_tsv('../txt/ttl_tracker/mr_onsets_all.txt',
                col_names=c("seq","ymd","hms","tr","station")) |>
       mutate(onset=ymd_hms(paste0(ymd," ",hms), tz = "America/New_York") |>
                    with_tz("UTC")) |>
@@ -22,7 +22,7 @@ mr <- read_tsv('txt/ttl_tracker/mr_onsets_all.txt',
       arrange(onset)
 
 # time of recieved button push on task PC
-task <- read_delim(Sys.glob('txt/ttl_tracker/*.log'),
+task <- read_delim(Sys.glob('../txt/ttl_tracker/*.log'),
                    id="fname",
                    skip=1,
                    col_names = c("stamp","volnum_seen","total_dur"), delim=" ") |>
@@ -74,6 +74,52 @@ sum(n_missed$n_missed_ttl)
 
 #+RESULTS:
 : 640
+
+** missingness distribution
+#+begin_src R :session :exports both :results output graphics file :file ttl_diff_dist.png
+gaps_dist <- task |>
+  group_by(fname) |>
+  mutate(tdiff = round(stamp - lag(stamp),2),
+    run=gsub('.*run-','',fname)) |>
+  filter(!is.na(tdiff), tdiff>1)
+
+ggplot(gaps_dist) +
+  aes(x=tdiff/0.75, fill=) +
+  geom_histogram(position='dodge', binwidth=1) +
+  labs(title="Distribution of time gap between TTLs",
+       fill="run #",
+       x="Volumes") +
+  facet_grid(run~.) +
+  see::theme_modern()
+#+end_src
+
+#+RESULTS:
+[[file:ttl_diff_dist.png]]
+
+#+begin_src R :session :colnames yes
+sort(gaps_dist$tdiff)|> rle() |> with(data.frame(lengths,nTRs_missing=values/.75))|> arrange(nTRs_missing)
+#+end_src
+
+#+RESULTS:
+| lengths | nTRs_missing |
+|---------+--------------|
+|       1 |            2 |
+|       3 |            8 |
+|       6 |            9 |
+|       3 |           10 |
+|       6 |           11 |
+|       4 |           12 |
+|       2 |           14 |
+|       2 |           15 |
+|       1 |           20 |
+|       1 |           22 |
+|       1 |           23 |
+|       1 |           28 |
+|       1 |           35 |
+|       1 |           45 |
+|       1 |           57 |
+|       1 |           75 |
+|       1 |           78 |
 
 * Differences of Differences
 
