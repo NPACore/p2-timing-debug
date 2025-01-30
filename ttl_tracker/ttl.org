@@ -250,12 +250,15 @@ ggplot(dod_tr) +
 [[file:TTL.png]]
 
 ** Per TR
-The task vs MR time difference was only once more than a single millisecond from expected when both task and MR have matching recorded time stamps.
+The task vs MR time difference was only once more than a single millisecond from expected when both task and MR have matching recorded time stamps. The colored points are jittered to see density.
 
 #+begin_src R :session :exports both :results output graphics file :file per_tr_dod.png
 ggplot(dod_tr) +
   aes(x=volnum, y=dod_ms, color=seq, shape=seq) +
-  geom_point(alpha=.7) +
+  #geom_line(aes(group=seq), alpha=.2) +
+  geom_jitter(alpha=.7, height=.3) +
+  geom_point(aes(color=NULL,shape=NULL), color='black',size=1) +
+  scale_y_continuous(breaks=-1:2) +
   theme_bw() +
   labs(title="per volume difference of differences")
 #+end_src
@@ -265,12 +268,13 @@ ggplot(dod_tr) +
 
 We can see this accumulates over time as the clocks two offline clocks drift?
 #+begin_src R :session :exports both :results output graphics file :file per_tr_diff_from_start.png
-dod_tr |> 
+dod_tr |>
  mutate(diff_from_first_ms=(first(tmdiff)-tmdiff)*1000) |>
  ggplot() +
-  aes(x=volnum, y=diff_from_first_ms, color=seq, shape=seq) +
+  aes(x=volnum, y=diff_from_first_ms, color=seq, shape=seq, group=seq) +
   geom_jitter(alpha=.7, height=.3) +
   geom_point(aes(color=NULL,shape=NULL), color='black',size=1) +
+  scale_y_continuous(breaks=-1:7) +
   theme_bw() +
   labs(title="per volume task-mr from seq start")
 #+end_src
