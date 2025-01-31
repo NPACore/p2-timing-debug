@@ -1,5 +1,6 @@
 # Time differences between MR task trigger and DICOM Acq time
 
+![](missed_ttl_cartoon.svg)
 
 ## Overview
 
@@ -17,6 +18,9 @@ Unfortunately, we cannot directly compare onset times because the computer clock
 
 
 See [`Makefile`](Makefile) for recipes.
+
+### Hardware failure
+![](ttl_tracker/TTL.png)
 
 ## Notes on timing
 
