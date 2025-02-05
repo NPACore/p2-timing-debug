@@ -20,3 +20,4 @@ argo/diff-of-diff.png filter=lfs diff=lfs merge=lfs -text
 afni_hrf.png filter=lfs diff=lfs merge=lfs -text
 luna/decon/bntpush-motor_thres-2.9103_tents.png filter=lfs diff=lfs merge=lfs -text
 txt/luna/diff-of-diff.csv filter=lfs diff=lfs merge=lfs -text
+txt/BridgeTeenSceen/tasks_times.tsv filter=lfs diff=lfs merge=lfs -text
