@@ -28,12 +28,12 @@ HEREDOC
    exit(1)
 }
 
-print join("\t",qw/file Start task_clock TriggerOffset acqtime_task id_fname id_log/),"\n";
+print join("\t",qw/file Start task_clock msec_count TriggerOffset acqtime_task id_fname id_log/),"\n";
 
 foreach my $fname (@ARGV) {
  my $sesid_file=$fname=~s/.*[_.-]([^-]+)-\d+.txt.*/$1/r;
  my $sesid_label="NA";
- my ($on_utcstr, $offset, $on_clock);
+ my ($on_utcstr, $offset, $on_clock, $msec_count);
  open(my $fh, '<', $fname) or die "$fname: $!";
  while($_=<$fh>) {
 
@@ -50,10 +50,11 @@ foreach my $fname (@ARGV) {
 
     # TODO: bottom of file has clock info but is occastionally a second before SessionStartDateTimeUtc
     # Clock.Information: <?xml version="1.0"?>\n<Clock xmlns:dt="urn:schemas-microsoft-com:datatypes"><Description dt:dt="string">E-Prime Primary Realtime Clock</Description><StartTime><Timestamp dt:dt="int">0</Timestamp><DateUtc dt:dt="string">2024-05-23T12:05:56Z</DateUtc></StartTime><FrequencyChanges><FrequencyChange><Frequency dt:dt="r8">3515693</Frequency><Timestamp dt:dt="r8">1535486416407</Timestamp><Current dt:dt="r8">0</Current><DateUtc dt:dt="string">2024-05-23T12:05:56Z</DateUtc></FrequencyChange></FrequencyChanges></Clock>
-    if(m/Timestamp><DateUtc dt:dt="string">(.*?)Z</){
+    if(m/Timestamp><DateUtc dt:dt="string">(.*?)Z<.*<Timestamp dt:dt="r8">(\d+)</){
        # 2024-01-16T19:19:30
        # TODO: used  dt="r8" -- not unix (or windows?) epoch time
        $on_clock=Time::Piece->strptime($1, "%Y-%m-%dT%H:%M:%S");
+       $msec_count=$2;
        next;
     }
 
@@ -74,6 +75,7 @@ foreach my $fname (@ARGV) {
  }
  say join("\t", basename($fname),
            $on_utcstr||"", $on_clock||"",
+           $msec_count||"",
            $offset,
            (($on_utcstr||$on_clock)+$offset/1000)->strftime("%F %R:%S"),
            $sesid_file, $sesid_label);
