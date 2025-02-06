@@ -59,9 +59,12 @@ foreach my $fname (@ARGV) {
        next;
     }
 
-    # seen PreSipRating.OnsetTime (ncanda alc), WaitForScanner, and WaitForScanner1 
-    if(/(PreSipRating|WaitRF|WaitForScanner.*)\.OnsetTime: (\d+)/){
-        $offset=$2;
+    # RTTime is time in ms since start of button push ('=' from TTL)
+    # WaitForScanner, WaitForScanner1, WaitRF seen in many near top of log
+    # Wait4Scanner.FinishTime in PEAR_PEER_task (at bottom of log!)
+    # PreSipRating.OnsetTime (ncanda alc) is the only push but it's not the start of scan :(
+    if(/(PreSipRating|WaitRF|Wait4Scanner|WaitForScanner.*)\.(RTTime|FinishTime): (\d+)/){
+        $offset=$3;
      }
  }
 
@@ -71,7 +74,7 @@ foreach my $fname (@ARGV) {
     next;
  }
  if(not $offset){
-   print(STDERR "WARNING: '$fname' did not have expected log info. not extracted\n") if(not $offset);
+   print(STDERR "WARNING: '$fname' does not have RTTime/FinishTime '=' push offset. not extracted\n") if(not $offset);
    next;
  }
  say join("\t", basename($fname),

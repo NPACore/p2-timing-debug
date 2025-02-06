@@ -12,7 +12,8 @@ txt/mr_times_p2.tsv:
 	./affected_from_db.bash > $@
 
 ## all eprime tasks
-txt/eprime_times.tsv: txt/EPrimeLogs/Phillips-D3-rest/*txt  txt/EPrimeLogs/Phillips-CENTRIM/*.txt txt/EPrimeLogs/Sarpal-MARS-C4_AXCPT/*.txt txt/EPrimeLogs/Clark-AlcPics_2023-2024/*.txt | txt/
+# txt/EPrimeLogs/Phillips-CENTRIM/*.txt is subset of txt/EPrimeLogs/BHV/*/*.txt ?
+txt/eprime_times.tsv: txt/EPrimeLogs/Phillips-D3-rest/*txt  txt/EPrimeLogs/Sarpal-MARS-C4_AXCPT/*.txt txt/EPrimeLogs/Clark-AlcPics_2023-2024/*.txt txt/EPrimeLogs/BHV/*/*.txt | txt/
 	./extract_eprime.pl $^ > $@
 
 ## ncanda (mr only)
