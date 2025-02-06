@@ -1,0 +1,314 @@
+#+TITLE: TTL timing check for WPC-8989, WPC-9053
+#+PROPERTY: HEADER-ARGS+ :eval no-export :exports both
+
+* Task start time offsets
+The tasks wait for the scanner's first bold EPI TR TTL pulse, seen as an equal sign key push. Expected order is
+  - RA starts task, participant sees "Waiting for scanner"
+  - tech starts MR sequence
+  - scanner starts with ~10s of discarded aquisistions
+  - scanner sends TTL pulse to signal start of recording
+  - task gets TTL as ~=~ key push. EPrime logs ~RTTime~ of "Wait" EPrime slide.
+
+** RTTime
+We expect the time between task start and scanner TTL ~=~ key to be > 10s but often less than a minute. Long delays might happen if task is ready before the technician or if the participant has questions before the start of the sequence.
+
+#+begin_src R :session :exports both :colnames yes
+library(dplyr); library(ggplot2); library(lubridate)
+d <- read.table('../txt/eprime_times.tsv', header=T, sep="\t")
+tasks <- d|>
+  filter(grepl('PEAR|CENTRIM|chzc',file)) |>
+  mutate(task=gsub('-[0-9-]+.txt$','',file),
+         offset_min = TriggerOffset/1000/60,
+         acqtime_task = ymd_hms(acqtime_task))
+
+task_smry <- tasks |>
+  group_by(task) |>
+  summarise(min=min(offset_min), md=median(offset_min), mx=max(offset_min),
+            first=as.Date(min(acqtime_task)), last=as.Date(max(acqtime_task)), n=n()) |>
+  mutate(across(where(is.numeric), \(x) round(x,2))) |>
+  arrange(first, -n)
+#+end_src
+
+#+NAME: rtt-dist
+#+RESULTS:
+| task                               |  min |   md |   mx |      first |       last |  n |
+|------------------------------------+------+------+------+------------+------------+----|
+| PEAR_Reward_Task                   | 0.35 | 0.46 | 1.29 | 2024-01-04 | 2024-11-25 | 36 |
+| PEAR_PEER_task_EP3_12-5-23b        | 0.53 | 0.69 | 4.86 | 2024-01-04 | 2024-11-25 | 19 |
+| chzc_pit-fMRI-revised-Feb_02_14_23 | 1.27 | 1.58 | 5.58 | 2024-01-04 | 2024-11-25 | 18 |
+| CENTRIM_BD_Reward_Task_tan         | 0.34 |  0.6 | 1.37 | 2024-01-19 | 2025-02-05 | 24 |
+| CENTRIM_BD_Reward_Task_cyan        | 0.38 | 0.69 | 3.23 | 2024-02-16 | 2024-10-21 | 14 |
+| CENTRIM_BD_Reward_Task_purple      | 0.36 |  0.6 | 1.52 | 2024-03-08 | 2024-11-14 | 16 |
+
+#+begin_src R :session :exports both :results file graphics :file EP_time-TTL.png :width 600 :height 200
+
+ggplot(tasks) +
+  aes(x=offset_min, fill=task) +
+  geom_histogram(bins=40) +
+  geom_point(y=10, data=task_smry, color="black", aes(x=md)) +
+  #geom_label(y=10, data=task_smry, color="black", aes(x=md, label=task)) +
+  scale_fill_brewer(palette="Accent") +
+  labs(x='minutes before "=" TTL')+
+  theme_bw()
+#+end_src
+
+#+RESULTS:
+[[file:EP_time-TTL.png]]
+
+** ~chzc~ is consistently longer
+chzc task starts later src_R[:session :exports results]{with(task_smry, min[grepl('chzc',task)])} {{{results(=1.27=)}}} than the rest on average.
+k
+We are pulling out ~WaitRF.RTTime~. Maybe there are more instruction slides before the scanner starts?
+
+#+begin_src bash :dir ../txt/EPrimeLogs/BHV/
+iconv -f utf-16 */chzc*.txt | grep -P '^[A-Za-z].*\.OnsetTime: ' | head -n6 | sort -k2,2n -t:
+#+end_src
+
+#+RESULTS:
+| Subject1.OnsetTime: |   86873 |
+| Subject1.OnsetTime: |  161306 |
+| Profile1.OnsetTime: |  164323 |
+| Profile2.OnsetTime: |  169340 |
+| WaitRF.OnsetTime:   |  180323 |
+| GoodBye.OnsetTime:  | 1179608 |
+
+* Extract MR
+#+begin_src R :session :results none
+library(stringr)
+source('../support.R') # mr_to_utc
+mr_all <-
+  read.table("../txt/mr_times_p2.tsv",
+             col.names=c("rundir","acqdate","acqhms", "tr"),
+             colClasses='character',
+             sep="\t") |>
+  mutate(tr=as.numeric(tr)/1000,
+         proj= str_extract(rundir,'WPC-\\d+'),
+         acqtime = mr_to_utc(acqdate, acqhms)) |>
+                                        # dont need individual components
+  select(-acqdate, -acqhms)
+
+mr <- mr_all |>
+  filter(grepl('WPC-(8989|9053)', proj),
+         !grepl('Rest', rundir)) |>
+  mutate(sesid=str_extract(rundir, '(?<=[0-9.-]{19}/)\\d+'),
+         rundir=basename(rundir),
+                                        # 'RewardedAntisaccade_repeat' is only run 2
+         task=str_extract(rundir,'CHAT|Peer|reward_\\d|Reward_task'))
+#+end_src
+
+* Combining Task and MR
+
+** Matching task names
+#+begin_src R :session :colnames yes
+mr_smry <- mr |> group_by(proj,task) |> summarise(first=min(acqtime), last=max(acqtime), n=n())
+#+end_src
+
+#+RESULTS:
+| proj     | task        | first                    | last                     |  n |
+|----------+-------------+--------------------------+--------------------------+----|
+| WPC-8989 | CHAT        | 2024-01-04 20:22:44.0175 | 2024-11-25 21:05:19.4175 | 18 |
+| WPC-8989 | Peer        | 2024-01-04 20:41:51.3575 | 2024-11-25 21:22:31.9    | 18 |
+| WPC-8989 | reward_1    | 2024-01-04 20:54:44.62   | 2024-11-25 21:35:39.545  | 18 |
+| WPC-8989 | reward_2    | 2024-01-04 21:03:57.6125 | 2024-11-25 21:44:44.9875 | 18 |
+| WPC-9053 | Reward_task | 2024-01-19 20:14:42.9025 | 2024-11-26 21:00:49.24   | 57 |
+
+#+begin_src R :session :colnames yes
+bhv2mr <- function(nm)
+  case_when(grepl('CENT', nm) ~ 'Reward_task',
+            grepl('chzc',nm) ~ 'CHAT',
+            grepl('PEAR_Reward',nm) ~ 'reward',
+            grepl('PEAR_PEER',nm) ~ 'Peer',
+            .default = NA)
+task_smry |>
+  select(task, first, last, n) |>
+  mutate(task_mr=bhv2mr(task))
+#+end_src
+
+#+RESULTS:
+| task                               |      first |       last |  n | task_mr     |
+|------------------------------------+------------+------------+----+-------------|
+| PEAR_Reward_Task                   | 2024-01-04 | 2024-11-25 | 36 | reward      |
+| PEAR_PEER_task_EP3_12-5-23b        | 2024-01-04 | 2024-11-25 | 19 | Peer        |
+| chzc_pit-fMRI-revised-Feb_02_14_23 | 2024-01-04 | 2024-11-25 | 18 | CHAT        |
+| CENTRIM_BD_Reward_Task_tan         | 2024-01-19 | 2025-02-05 | 24 | Reward_task |
+| CENTRIM_BD_Reward_Task_cyan        | 2024-02-16 | 2024-10-21 | 14 | Reward_task |
+| CENTRIM_BD_Reward_Task_purple      | 2024-03-08 | 2024-11-14 | 16 | Reward_task |
+
+** Merge
+
+#+begin_src R :session :colnames yes :exports both
+task_for_merge <- tasks |>
+  transmute(sesid=id_log, ep_task=task,
+            task=bhv2mr(ep_task),
+            acqtime_task, clock_count, clock_freq, TriggerOffset,
+            vdate=as.Date(acqtime_task),
+            ep_clock = clock_count/clock_freq + TriggerOffset ) |>
+  group_by(sesid, vdate, task) |>
+  arrange(acqtime_task) |>
+  mutate(runno=1:n())
+
+mr_for_merge <- mr |>
+  rename(acqtime_mr=acqtime) |>
+  mutate(task_mr=task,
+         task=gsub('_[12]$','',task_mr),
+         vdate=as.Date(acqtime_mr)) |>
+  group_by(proj,sesid,vdate,task) |>
+  arrange(acqtime_mr)|>
+  mutate(runno=1:n())
+
+mr_ep <-
+  merge(task_for_merge, mr_for_merge, by=c("sesid", "vdate", "task", "runno"))
+
+mr_ep_smry <- mr_ep |>
+ group_by(proj, task, runno) |>
+ summarise(first_mr=min(acqtime_mr), first_ep=min(acqtime_task),
+           last_mr=max(acqtime_mr),  last_ep=min(acqtime_task),
+           n=n(),
+           id_repeat=max(rle(sort(paste(sesid,vdate)))$length))
+
+#+end_src
+
+#+RESULTS:
+| proj     | task        | runno | first_mr                 | first_ep            | last_mr                  | last_ep             |  n | id_repeat |
+|----------+-------------+-------+--------------------------+---------------------+--------------------------+---------------------+----+-----------|
+| WPC-8989 | CHAT        |     1 | 2024-01-04 20:22:44.0175 | 2024-01-04 20:22:16 | 2024-11-25 21:05:19.4175 | 2024-01-04 20:22:16 | 17 |         1 |
+| WPC-8989 | Peer        |     1 | 2024-01-04 20:41:51.3575 | 2024-01-04 20:41:25 | 2024-11-25 21:22:31.9    | 2024-01-04 20:41:25 | 18 |         1 |
+| WPC-8989 | reward      |     1 | 2024-01-04 20:54:44.62   | 2024-01-04 20:54:17 | 2024-11-25 21:35:39.545  | 2024-01-04 20:54:17 | 18 |         1 |
+| WPC-8989 | reward      |     2 | 2024-01-04 21:03:57.6125 | 2024-01-04 21:03:31 | 2024-11-25 21:44:44.9875 | 2024-01-04 21:03:31 | 17 |         1 |
+| WPC-9053 | Reward_task |     1 | 2024-01-19 20:14:42.9025 | 2024-01-19 20:10:09 | 2024-11-21 19:29:12.9375 | 2024-01-19 20:10:09 | 25 |         1 |
+| WPC-9053 | Reward_task |     2 | 2024-01-19 20:24:16.675  | 2024-01-19 20:19:42 | 2024-11-21 19:38:30.195  | 2024-01-19 20:19:42 | 25 |         1 |
+
+
+*** TODO Bad merge
+We loose a few tasks when merging. TODO: check ~anti_join~ for what gets dropped
+#+begin_src R :session :colnames yes
+data.frame(mr=nrow(mr), tasks=nrow(tasks), merged=nrow(mr_ep))
+#+end_src
+
+#+RESULTS:
+|  mr | tasks | merged |
+|-----+-------+--------|
+| 129 |   127 |    120 |
+
+
+** timing diff of diffs
+two difference of differences calculations:
+  - ~(task1 - mr1) - (task2-mr2)~ -- easier to match times. limited by second-precise EPrime log time
+  - ~(task1 - task2) - (mr1 - mr2)~ -- task diff first keeps the EP second-precise timing isolated in eprime instead of spreading to both MRs.
+    - And we can try to use the windows boot time counter for millisecond accurate timing in EPrime. ~ep_clock = clock_count/clock_freq + TriggerOffset~ from above.
+
+#+begin_src R :session :colnames yes
+times <- mr_ep |>
+  group_by(vdate, sesid) |>
+  arrange(acqtime_task) |>
+  mutate(mrdiff= time_length(diff_lead1(acqtime_mr),'seconds'),
+         tdiff= time_length(diff_lead1(acqtime_task),'seconds'),
+         dod_w_mt=mrdiff-tdiff,
+
+         tdiff_epclk = diff_lead1(ep_clock),
+         dod_w_mt_clk=mrdiff-tdiff_epclk,
+
+
+         bdiff = time_length(acqtime_mr-acqtime_task, 'seconds'),
+         dod_b_mt=diff_lead1(bdiff)
+         )
+
+write.csv(times,'time_diffs.csv', row.names=F,quote=F)
+
+times_smry <- times |> group_by(proj,task) |>
+  summarise(wth_mx=max(abs(dod_w_mt),na.rm=T),
+            clk_mx=max(abs(dod_w_mt_clk),na.rm=T),
+            btw_mx=max(abs(dod_b_mt),na.rm=T),
+
+            wth_min=min(abs(dod_w_mt),na.rm=T),
+            clk_min=min(abs(dod_w_mt_clk),na.rm=T),
+            btw_min=min(abs(dod_b_mt),na.rm=T),
+            n=length(na.omit(dod_w_mt)))|>
+  mutate(across(where(is.numeric),\(x) round(x,2)))
+#+end_src
+
+#+RESULTS:
+| proj     | task        | wth_mx |    clk_mx | btw_mx | wth_min | clk_min | btw_min |  n |
+|----------+-------------+--------+-----------+--------+---------+---------+---------+----|
+| WPC-8989 | CHAT        |  14.76 |  285383.5 | 885.75 |       0 | 1539.44 |    0.14 | 17 |
+| WPC-8989 | Peer        |  14.76 |  285383.5 | 885.75 |       0 | 1539.44 |    0.03 | 18 |
+| WPC-8989 | reward      |   0.82 | 189020.33 |  49.22 |       0 |  368.88 |    0.03 | 35 |
+| WPC-9053 | Reward_task |  44.66 | 155891.12 | 502.07 |       0 |  385.02 |    0.24 | 50 |
+
+
+#+begin_src  R :session :results file graphics :file dod.png :width 600 :height 600
+TR<-min(mr$tr)
+p.data <- times |> #filter(abs(dod_b_mt) < 200) |>
+  mutate(TTLerror_b=abs(dod_b_mt) > TR,
+         TTLerror_w=abs(dod_w_mt) > TR,
+         vdate=as.Date(acqtime_mr),
+         #label=paste0(sesid,"@", round(dod_b_mt/tr,1),' TRs')
+         label=paste0(sesid," ", substr(task,1,2)))
+
+plt_base <-
+   ggplot(p.data) +
+   # show TR
+   geom_hline(yintercept=c(-1,1)*TR, color='green', linetype=2) +
+   geom_line(aes(group=paste(sesid,vdate)),alpha=.3) +
+   geom_point(aes(shape=task)) +
+   #cowplot::theme_cowplot() +
+   see::theme_modern() +
+   theme(axis.title.y = element_text(size = 14)) +
+   scale_color_manual(values=c("black","red"), guide="none") +
+   scale_shape_manual(values=c(20,22,23,1)) +
+   labs(x='acquisition date')
+
+p_tr_btwn <- plt_base +
+   aes(y=dod_b_mt, x=vdate, color=TTLerror_b) +
+   ggrepel::geom_text_repel(data=filter(p.data, TTLerror_b),
+              aes(label=label, color=NULL),
+              vjust=1,hjust=-.1, alpha=.3, size=3) +
+   labs(y=expression((mr[1]-task[1]) - (mr[2]-task[2]) ~ (s)))
+
+p_tr_wthn <- plt_base +
+   aes(y=dod_w_mt, x=vdate, color=TTLerror_w) +
+   ggrepel::geom_text_repel(data=filter(p.data, TTLerror_w),
+              aes(label=label, color=NULL),
+              vjust=1,hjust=-.1, alpha=.3, size=3) +
+   labs(y=expression(mr[1-2] - task[1-2] ~ (s)))
+
+cowplot::plot_grid(p_tr_btwn, p_tr_wthn, nrow=2)
+#+end_src
+
+#+RESULTS:
+[[file:dod.png]]
+
+
+#+begin_src R :session :colnames yes
+suspect <- times |> filter(abs(dod_w_mt) > tr) |> select(proj,sesid, vdate)
+times |> select(proj, vdate, sesid, task, tr, runno, matches('acqtime'), matches('dod'), matches('diff')) |>
+merge(suspect, by=c("proj","sesid","vdate")) |>
+  mutate(across(where(is.numeric),\(x) round(x,2)))
+#|>
+#  transmute(proj, vdate, sesid, task, tr,vdate, runno,
+#            diff_mr_diff_task=round(dod_w_mt,2),
+#            mr=format(acqtime_mr,"%H:%M:%OS2"),
+#            eprime=format(acqtime_task,"%H:%M:%OS2"),
+#            suspect=abs(diff_mr_diff_task)>tr
+#)
+#+end_src
+
+#+RESULTS:
+| proj     | sesid |      vdate | task        |   tr | runno | acqtime_task        | acqtime_mr               | dod_w_mt | dod_w_mt_clk | dod_b_mt | mrdiff | tdiff | tdiff_epclk |   bdiff |
+|----------+-------+------------+-------------+------+-------+---------------------+--------------------------+----------+--------------+----------+--------+-------+-------------+---------|
+| WPC-8989 |  1015 | 2024-10-10 | reward      |  1.5 |     2 | 2024-10-10 19:50:06 | 2024-10-10 19:50:01.5125 |    -0.48 |    -22104.86 |   -28.76 |   8.97 |  9.45 |    22113.83 |   -4.49 |
+| WPC-8989 |  1015 | 2024-10-10 | reward      |  1.5 |     2 | 2024-10-10 19:50:06 | 2024-10-10 19:50:01.5125 |    -0.48 |    -22104.86 |   -28.76 |   8.97 |  9.45 |    22113.83 |   -4.49 |
+| WPC-8989 |  1015 | 2024-10-10 | CHAT        | 1.13 |     1 | 2024-10-10 19:10:14 | 2024-10-10 18:55:53.3575 |    14.76 |     40139.06 |   885.75 |  32.11 | 17.35 |   -40106.95 | -860.64 |
+| WPC-8989 |  1015 | 2024-10-10 | CHAT        | 1.13 |     1 | 2024-10-10 19:10:14 | 2024-10-10 18:55:53.3575 |    14.76 |     40139.06 |   885.75 |  32.11 | 17.35 |   -40106.95 | -860.64 |
+| WPC-8989 |  1015 | 2024-10-10 | Peer        | 1.13 |     1 | 2024-10-10 19:27:35 | 2024-10-10 19:28:00.11   |    14.76 |     40139.06 |   885.75 |  32.11 | 17.35 |   -40106.95 |   25.11 |
+| WPC-8989 |  1015 | 2024-10-10 | Peer        | 1.13 |     1 | 2024-10-10 19:27:35 | 2024-10-10 19:28:00.11   |    14.76 |     40139.06 |   885.75 |  32.11 | 17.35 |   -40106.95 |   25.11 |
+| WPC-8989 |  1015 | 2024-10-10 | reward      |  1.5 |     1 | 2024-10-10 19:40:39 | 2024-10-10 19:41:03.275  |    -0.01 |     14923.11 |    -0.84 |  13.05 | 13.07 |   -14910.05 |   24.28 |
+| WPC-8989 |  1015 | 2024-10-10 | reward      |  1.5 |     1 | 2024-10-10 19:40:39 | 2024-10-10 19:41:03.275  |    -0.01 |     14923.11 |    -0.84 |  13.05 | 13.07 |   -14910.05 |   24.28 |
+| WPC-9053 |  4011 | 2024-05-17 | Reward_task |  1.2 |     2 | 2024-05-17 18:39:35 | 2024-05-17 18:36:13.1725 |    44.66 |     57172.37 |  -502.07 |  53.93 |  9.27 |   -57118.44 | -201.83 |
+| WPC-9053 |  4011 | 2024-05-17 | Reward_task |  1.2 |     2 | 2024-05-17 18:39:35 | 2024-05-17 18:36:13.1725 |    44.66 |     57172.37 |  -502.07 |  53.93 |  9.27 |   -57118.44 | -201.83 |
+| WPC-9053 |  4011 | 2024-05-17 | Reward_task |  1.2 |     1 | 2024-05-17 18:30:19 | 2024-05-17 18:35:19.245  |    44.66 |     57172.37 |  -502.07 |  53.93 |  9.27 |   -57118.44 |  300.24 |
+| WPC-9053 |  4011 | 2024-05-17 | Reward_task |  1.2 |     1 | 2024-05-17 18:30:19 | 2024-05-17 18:35:19.245  |    44.66 |     57172.37 |  -502.07 |  53.93 |  9.27 |   -57118.44 |  300.24 |
+| WPC-9053 |  4019 | 2024-09-20 | Reward_task |  1.2 |     1 | 2024-09-20 18:28:03 | 2024-09-20 18:21:14.18   |    -1.92 |    -21194.95 |  -115.05 |    7.8 |  9.72 |    21202.75 | -408.82 |
+| WPC-9053 |  4019 | 2024-09-20 | Reward_task |  1.2 |     1 | 2024-09-20 18:28:03 | 2024-09-20 18:21:14.18   |    -1.92 |    -21194.95 |  -115.05 |    7.8 |  9.72 |    21202.75 | -408.82 |
+| WPC-9053 |  4019 | 2024-09-20 | Reward_task |  1.2 |     2 | 2024-09-20 18:37:46 | 2024-09-20 18:29:02.1325 |    -1.92 |    -21194.95 |  -115.05 |    7.8 |  9.72 |    21202.75 | -523.87 |
+| WPC-9053 |  4019 | 2024-09-20 | Reward_task |  1.2 |     2 | 2024-09-20 18:37:46 | 2024-09-20 18:29:02.1325 |    -1.92 |    -21194.95 |  -115.05 |    7.8 |  9.72 |    21202.75 | -523.87 |
