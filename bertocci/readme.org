@@ -278,19 +278,36 @@ cowplot::plot_grid(p_tr_btwn, p_tr_wthn, nrow=2)
 #+RESULTS:
 [[file:dod.png]]
 
+* Exploring suspect timing
 
+Diff of diff's does not have enough data to identify the task that was off when there are only 2 to compare. Repeats with identical missed TRs suggest only one is missed the TTL trigger (or both but by a different amount)
 #+begin_src R :session :colnames yes
-suspect <- times |> filter(abs(dod_w_mt) > tr) |> select(proj,sesid, vdate)
+suspect <- times |> filter(abs(dod_w_mt) > tr)
+suspect |> transmute(proj, sesid, vdate, task, missedTRs = round(dod_w_mt/tr, 2))
+#+end_src
+
+#+RESULTS:
+| proj     | sesid |      vdate | task        | missedTRs |
+|----------+-------+------------+-------------+-----------|
+| WPC-9053 |  4011 | 2024-05-17 | Reward_task |     37.22 |
+| WPC-9053 |  4011 | 2024-05-17 | Reward_task |     37.22 |
+| WPC-9053 |  4019 | 2024-09-20 | Reward_task |      -1.6 |
+| WPC-9053 |  4019 | 2024-09-20 | Reward_task |      -1.6 |
+| WPC-8989 |  1015 | 2024-10-10 | CHAT        |     13.06 |
+| WPC-8989 |  1015 | 2024-10-10 | Peer        |     13.06 |
+
+The full session those scans are part of:
+#+begin_src R :session :colnames yes
 times |> select(proj, vdate, sesid, task, tr, runno, matches('acqtime'), matches('dod'), matches('diff')) |>
-merge(suspect, by=c("proj","sesid","vdate")) |>
+  merge(suspect |> select(proj,sesid, vdate), by=c("proj","sesid","vdate")) |>
   mutate(across(where(is.numeric),\(x) round(x,2)))
-#|>
-#  transmute(proj, vdate, sesid, task, tr,vdate, runno,
-#            diff_mr_diff_task=round(dod_w_mt,2),
-#            mr=format(acqtime_mr,"%H:%M:%OS2"),
-#            eprime=format(acqtime_task,"%H:%M:%OS2"),
-#            suspect=abs(diff_mr_diff_task)>tr
-#)
+  #|>
+  #  transmute(proj, vdate, sesid, task, tr,vdate, runno,
+  #            diff_mr_diff_task=round(dod_w_mt,2),
+  #            mr=format(acqtime_mr,"%H:%M:%OS2"),
+  #            eprime=format(acqtime_task,"%H:%M:%OS2"),
+  #            suspect=abs(diff_mr_diff_task)>tr
+  #)
 #+end_src
 
 #+RESULTS:
