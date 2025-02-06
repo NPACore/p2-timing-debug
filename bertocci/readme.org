@@ -60,7 +60,7 @@ chzc task starts later src_R[:session :exports results]{with(task_smry, min[grep
 k
 We are pulling out ~WaitRF.RTTime~. Maybe there are more instruction slides before the scanner starts?
 
-#+begin_src bash :dir ../txt/EPrimeLogs/BHV/
+#+begin_src bash :dir ../txt/EPrimeLogs/BHV/ :exports both
 iconv -f utf-16 */chzc*.txt | grep -P '^[A-Za-z].*\.OnsetTime: ' | head -n6 | sort -k2,2n -t:
 #+end_src
 
@@ -99,7 +99,7 @@ mr <- mr_all |>
 * Combining Task and MR
 
 ** Matching task names
-#+begin_src R :session :colnames yes
+#+begin_src R :session :colnames yes :exports both
 mr_smry <- mr |> group_by(proj,task) |> summarise(first=min(acqtime), last=max(acqtime), n=n())
 #+end_src
 
@@ -112,7 +112,7 @@ mr_smry <- mr |> group_by(proj,task) |> summarise(first=min(acqtime), last=max(a
 | WPC-8989 | reward_2    | 2024-01-04 21:03:57.6125 | 2024-11-25 21:44:44.9875 | 18 |
 | WPC-9053 | Reward_task | 2024-01-19 20:14:42.9025 | 2024-11-26 21:00:49.24   | 57 |
 
-#+begin_src R :session :colnames yes
+#+begin_src R :session :colnames yes :exports both
 bhv2mr <- function(nm)
   case_when(grepl('CENT', nm) ~ 'Reward_task',
             grepl('chzc',nm) ~ 'CHAT',
@@ -181,7 +181,7 @@ mr_ep_smry <- mr_ep |>
 
 *** TODO Bad merge
 We loose a few tasks when merging. TODO: check ~anti_join~ for what gets dropped
-#+begin_src R :session :colnames yes
+#+begin_src R :session :colnames yes :exports both
 data.frame(mr=nrow(mr), tasks=nrow(tasks), merged=nrow(mr_ep))
 #+end_src
 
@@ -197,7 +197,7 @@ two difference of differences calculations:
   - ~(task1 - task2) - (mr1 - mr2)~ -- task diff first keeps the EP second-precise timing isolated in eprime instead of spreading to both MRs.
     - And we can try to use the windows boot time counter for millisecond accurate timing in EPrime. ~ep_clock = clock_count/clock_freq + TriggerOffset~ from above.
 
-#+begin_src R :session :colnames yes
+#+begin_src R :session :colnames yes :exports both
 times <- mr_ep |>
   group_by(vdate, sesid) |>
   arrange(acqtime_task) |>
@@ -236,7 +236,7 @@ times_smry <- times |> group_by(proj,task) |>
 | WPC-9053 | Reward_task |  44.66 | 155891.12 | 502.07 |       0 |  385.02 |    0.24 | 50 |
 
 
-#+begin_src  R :session :results file graphics :file dod.png :width 600 :height 600
+#+begin_src  R :session :results file graphics :file dod.png :width 600 :height 600 :exports both
 TR<-min(mr$tr)
 p.data <- times |> #filter(abs(dod_b_mt) < 200) |>
   mutate(TTLerror_b=abs(dod_b_mt) > TR,
@@ -281,7 +281,7 @@ cowplot::plot_grid(p_tr_btwn, p_tr_wthn, nrow=2)
 * Exploring suspect timing
 
 Diff of diff's does not have enough data to identify the task that was off when there are only 2 to compare. Repeats with identical missed TRs suggest only one is missed the TTL trigger (or both but by a different amount)
-#+begin_src R :session :colnames yes
+#+begin_src R :session :colnames yes :exports both
 suspect <- times |> filter(abs(dod_w_mt) > tr)
 suspect |> transmute(proj, sesid, vdate, task, missedTRs = round(dod_w_mt/tr, 2))
 #+end_src
@@ -297,7 +297,7 @@ suspect |> transmute(proj, sesid, vdate, task, missedTRs = round(dod_w_mt/tr, 2)
 | WPC-8989 |  1015 | 2024-10-10 | Peer        |     13.06 |
 
 The full session those scans are part of:
-#+begin_src R :session :colnames yes
+#+begin_src R :session :colnames yes :exports both
 times |> select(proj, vdate, sesid, task, tr, runno, matches('acqtime'), matches('dod'), matches('diff')) |>
   merge(suspect |> select(proj,sesid, vdate), by=c("proj","sesid","vdate")) |>
   mutate(across(where(is.numeric),\(x) round(x,2)))
